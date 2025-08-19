@@ -159,7 +159,11 @@ async def create_calendar(
     )
     session.add(cal)
     session.commit()
-    return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
+    token = request.query_params.get("token") or request.headers.get("X-Admin-Token")
+    redirect_url = "/admin"
+    if token:
+        redirect_url += f"?token={token}"
+    return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
 
 # ICS proxy so browsers can load remote feeds without CORS issues
 @app.get("/api/cal/{slug}/ics", response_class=PlainTextResponse)
@@ -230,7 +234,11 @@ async def delete_calendar(request: Request, slug: str, session: Session = Depend
             pass
     session.delete(cal)
     session.commit()
-    return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
+    token = request.query_params.get("token") or request.headers.get("X-Admin-Token")
+    redirect_url = "/admin"
+    if token:
+        redirect_url += f"?token={token}"
+    return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
 
 @app.on_event("startup")
 def on_start():
