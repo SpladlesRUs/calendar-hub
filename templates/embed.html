@@ -11,10 +11,12 @@
       --primary: {{PRIMARY}};
       --accent: {{ACCENT}};
       --bg: {{BG}};
+      --text: {{TEXT_COLOR}};
+      --title: {{TITLE_COLOR}};
     }
-    body{background-color: var(--bg);}
+    body{background-color: var(--bg); color: var(--text);}
     .logo{height:{{LOGO_HEIGHT}}px; object-fit:contain}
-    header.bar{background-color:var(--primary);color:#fff}
+    header.bar{background-color:var(--primary);color:var(--title)}
     .wrap{max-width:1100px;margin:8px auto;padding:0 12px}
   </style>
 </head>
@@ -52,6 +54,8 @@
         eventDisplay: 'block',
         eventColor: getComputedStyle(document.documentElement).getPropertyValue('--primary'),
         eventBorderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent'),
+        eventTextColor: getComputedStyle(document.documentElement).getPropertyValue('--text'),
+        titleColor: getComputedStyle(document.documentElement).getPropertyValue('--title'),
         timeZone: '{{TZ}}',
         events: [{
           url: '/api/cal/{{SLUG}}/ics',

@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Edit Calendar</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <main class="wrap">
+    <h2>Edit calendar</h2>
+    <form method="post" action="/admin/edit/{{SLUG}}{{TOKEN_PARAM}}" enctype="multipart/form-data">
+      <fieldset>
+        <legend>Calendar Config</legend>
+        <div class="grid">
+          <label>Name <input name="name" value="{{NAME}}" required></label>
+          <label>Slug <input name="slug" value="{{SLUG}}" readonly></label>
+          <label>Incoming ICS URL <input name="incoming_ics_url" value="{{ICS}}"></label>
+          <label>Timezone <input name="timezone" value="{{TZ}}"></label>
+          <label>Desktop Default View
+            <select name="desktop_view">
+              <option value="dayGridMonth" {{DESKTOP_MONTH}}>Month</option>
+              <option value="timeGridWeek" {{DESKTOP_WEEK}}>Week</option>
+              <option value="timeGridDay" {{DESKTOP_DAY}}>Day</option>
+              <option value="listWeek" {{DESKTOP_LIST}}>List</option>
+            </select>
+          </label>
+          <label>Mobile Default View
+            <select name="mobile_view">
+              <option value="dayGridMonth" {{MOBILE_MONTH}}>Month</option>
+              <option value="timeGridWeek" {{MOBILE_WEEK}}>Week</option>
+              <option value="timeGridDay" {{MOBILE_DAY}}>Day</option>
+              <option value="listWeek" {{MOBILE_LIST}}>List</option>
+            </select>
+          </label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Calendar Customization</legend>
+        <div class="grid">
+          <label>Primary Color <input name="primary_color" type="color" value="{{PRIMARY}}"></label>
+          <label>Accent Color <input name="accent_color" type="color" value="{{ACCENT}}"></label>
+          <label>Background Color <input name="background_color" type="color" value="{{BG}}"></label>
+          <label>Text Color <input name="text_color" type="color" value="{{TEXT_COLOR}}"></label>
+          <label>Title Color <input name="title_color" type="color" value="{{TITLE_COLOR}}"></label>
+          <label>Logo URL <input name="logo_url" value="{{LOGO_URL}}"></label>
+          <label>Upload Logo (optional) <input type="file" name="logo_file" accept="image/*"></label>
+          <label>Logo Height (px) <input name="logo_height" type="number" value="{{LOGO_HEIGHT}}"></label>
+          <label><input type="checkbox" name="show_name" value="1" {{SHOW_NAME_CHECKED}}> Show Calendar Name</label>
+        </div>
+      </fieldset>
+      <div class="right">
+        <button type="submit">Save</button>
+      </div>
+    </form>
+  </main>
+</body>
+</html>
