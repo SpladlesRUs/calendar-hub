@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Calendar Hub Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <h2>Admin Login</h2>
+      <form id="login-form">
+        <label>Username <input name="username" required></label>
+        <label>Password <input type="password" name="password" required></label>
+        <div class="right"><button type="submit">Login</button></div>
+      </form>
+    </section>
+  </main>
+  <script>
+    const stored = localStorage.getItem('adminToken');
+    if (stored) {
+      window.location = `/admin?token=${stored}`;
+    }
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+      loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(loginForm);
+        const resp = await fetch('/admin/login', {
+          method: 'POST',
+          body: new URLSearchParams(formData)
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          localStorage.setItem('adminToken', data.token);
+          window.location = `/admin?token=${data.token}`;
+        } else {
+          alert('Login failed');
+        }
+      });
+    }
+  </script>
+</body>
+</html>
