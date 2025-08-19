@@ -328,7 +328,7 @@ async def embed(slug: str, session: Session = Depends(get_session)):
 
 
 @app.get("/c/{slug}/embed.js", response_class=PlainTextResponse)
-async def embed_script(slug: str, session: Session = Depends(get_session)):
+async def embed_script(request: Request, slug: str, session: Session = Depends(get_session)):
     """Return a JS loader that renders the calendar into #calendar-container."""
     cal = session.exec(
         select(Calendar).where(Calendar.slug == slug, Calendar.is_public == True)
@@ -336,30 +336,63 @@ async def embed_script(slug: str, session: Session = Depends(get_session)):
     if not cal:
         raise HTTPException(status_code=404, detail="Calendar not found")
 
+    base = str(request.base_url).rstrip("/")
+    logo_url = ""
+    if cal.logo_url:
+        if cal.logo_url.startswith("http://") or cal.logo_url.startswith("https://"):
+            logo_url = cal.logo_url
+        else:
+            logo_url = f"{base}{cal.logo_url}"
+
     logo_html = (
-        f'<img class="logo" src="{cal.logo_url}" alt="{cal.name} logo">'
-        if cal.logo_url
-        else ""
+        f'<img class="logo" src="{logo_url}" alt="{cal.name} logo">' if logo_url else ""
     )
     title_html = f"<h1 style='margin-left:8px'>{cal.name}</h1>" if cal.show_name else ""
+    ics_url = f"{base}/api/cal/{cal.slug}/ics"
 
     js = f"""
 (function(){{
-  const container=document.getElementById('calendar-container');
-  if(!container) return;
-  container.innerHTML=`<div class='wrap'><header class=\"bar\"><div class=\"left\">{logo_html}{title_html}</div><div class=\"muted\">{cal.timezone}</div></header><div id=\"calendar\"></div></div>`;
-  const style=document.createElement('style');
-  style.textContent=`#calendar-container{{--primary:{cal.primary_color};--accent:{cal.accent_color};--bg:{cal.background_color};--text:{cal.text_color};--title:{cal.title_color};background-color:var(--bg);color:var(--text);}}#calendar-container .logo{{height:{cal.logo_height}px;object-fit:contain}}#calendar-container header.bar{{background-color:var(--primary);color:var(--title)}}#calendar-container .wrap{{max-width:1100px;margin:8px auto;padding:0 12px}}`;
-  document.head.appendChild(style);
-  const el=container.querySelector('#calendar');
-  const isMobile=window.matchMedia('(max-width: 768px)').matches;
-  const initialView=isMobile?'{cal.mobile_view}':'{cal.desktop_view}';
-  const headerDesktop={{ left:'prev,next today', center:'title', right:'dayGridMonth,timeGridWeek,timeGridDay,listWeek' }};
-  const headerMobile={{ center:'title', left:'', right:'' }};
-  const footerMobile={{ left:'prev,next today', right:'dayGridMonth,timeGridWeek,timeGridDay,listWeek' }};
-  const colors=getComputedStyle(container);
-  const calendar=new FullCalendar.Calendar(el,{{themeSystem:'standard',initialView,headerToolbar:isMobile?headerMobile:headerDesktop,footerToolbar:isMobile?footerMobile:undefined,height:'auto',nowIndicator:true,eventDisplay:'block',eventColor:colors.getPropertyValue('--primary'),eventBorderColor:colors.getPropertyValue('--accent'),eventTextColor:colors.getPropertyValue('--text'),timeZone:'{cal.timezone}',events:[{{url:'/api/cal/{cal.slug}/ics',format:'ics'}}]}});
-  calendar.render();
+  const loadStyle = href => new Promise((res, rej) => {{
+    if (document.querySelector(`link[href="${{href}}"]`)) return res();
+    const l=document.createElement('link');
+    l.rel='stylesheet';
+    l.href=href;
+    l.onload=res;
+    l.onerror=rej;
+    document.head.appendChild(l);
+  }});
+  const loadScript = src => new Promise((res, rej) => {{
+    if (document.querySelector(`script[src="${{src}}"]`)) return res();
+    const s=document.createElement('script');
+    s.src=src;
+    s.onload=res;
+    s.onerror=rej;
+    document.head.appendChild(s);
+  }});
+
+  async function init(){{
+    await loadStyle('https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css');
+    await loadStyle('{base}/static/styles.css');
+    await loadScript('https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js');
+    await loadScript('https://cdn.jsdelivr.net/npm/@fullcalendar/icalendar@6.1.15/index.global.min.js');
+
+    const container=document.getElementById('calendar-container');
+    if(!container) return;
+    container.innerHTML=`<div class='wrap'><header class=\"bar\"><div class=\"left\">{logo_html}{title_html}</div><div class=\"muted\">{cal.timezone}</div></header><div id=\"calendar\"></div></div>`;
+    const style=document.createElement('style');
+    style.textContent=`#calendar-container{{--primary:{cal.primary_color};--accent:{cal.accent_color};--bg:{cal.background_color};--text:{cal.text_color};--title:{cal.title_color};}}#calendar-container .logo{{height:{cal.logo_height}px;object-fit:contain}}`;
+    document.head.appendChild(style);
+    const el=container.querySelector('#calendar');
+    const isMobile=window.matchMedia('(max-width: 768px)').matches;
+    const initialView=isMobile?'{cal.mobile_view}':'{cal.desktop_view}';
+    const headerDesktop={{ left:'prev,next today', center:'title', right:'dayGridMonth,timeGridWeek,timeGridDay,listWeek' }};
+    const headerMobile={{ center:'title', left:'', right:'' }};
+    const footerMobile={{ left:'prev,next today', right:'dayGridMonth,timeGridWeek,timeGridDay,listWeek' }};
+    const colors=getComputedStyle(container);
+    const calendar=new FullCalendar.Calendar(el,{{themeSystem:'standard',initialView,headerToolbar:isMobile?headerMobile:headerDesktop,footerToolbar:isMobile?footerMobile:undefined,height:'auto',nowIndicator:true,eventDisplay:'block',eventColor:colors.getPropertyValue('--primary'),eventBorderColor:colors.getPropertyValue('--accent'),eventTextColor:colors.getPropertyValue('--text'),timeZone:'{cal.timezone}',events:[{{url:'{ics_url}',format:'ics'}}]}});
+    calendar.render();
+  }}
+  init();
 }})();
 """
     return PlainTextResponse(js, media_type="text/javascript")
