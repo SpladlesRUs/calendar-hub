@@ -13,6 +13,15 @@
   </header>
 
   <main class="wrap">
+    <section class="card" id="login-card">
+      <h2>Admin Login</h2>
+      <form id="login-form">
+        <label>Username <input name="username" required></label>
+        <label>Password <input type="password" name="password" required></label>
+        <div class="right"><button type="submit">Login</button></div>
+      </form>
+    </section>
+
     <section class="card">
       <h2>Create calendar</h2>
       <form method="post" action="{{form_action}}" enctype="multipart/form-data">
@@ -37,7 +46,7 @@
         <div class="right">
           <button type="submit">Save</button>
         </div>
-        <p class="muted">Include <code>?token=YOUR_ADMIN_TOKEN</code> in the URL or send header <code>X-Admin-Token</code>.</p>
+        <p class="muted">Login to receive an admin token. Include <code>?token=TOKEN</code> in the URL or send header <code>X-Admin-Token</code> for protected requests.</p>
         <script>
           const nameEl = document.getElementById('name');
           const slugEl = document.getElementById('slug');
@@ -57,7 +66,7 @@
       </form>
     </section>
 
-    <section class="card">
+  <section class="card">
       <h2>Calendars</h2>
       <table>
         <thead><tr><th>Name</th><th>Slug</th><th>Incoming ICS</th><th>Embed</th></tr></thead>
@@ -68,6 +77,37 @@
       <p class="muted">Embed URL format: <code>/c/&lt;slug&gt;/embed</code></p>
     </section>
   </main>
+  <script>
+    const loginForm = document.getElementById('login-form');
+    const loginCard = document.getElementById('login-card');
+    const url = new URL(window.location);
+    const stored = localStorage.getItem('adminToken');
+    if (!url.searchParams.get('token') && stored) {
+      url.searchParams.set('token', stored);
+      window.location = url.toString();
+    }
+    if (loginForm) {
+      loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(loginForm);
+        const resp = await fetch('/admin/login', {
+          method: 'POST',
+          body: new URLSearchParams(formData)
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          localStorage.setItem('adminToken', data.token);
+          url.searchParams.set('token', data.token);
+          window.location = url.toString();
+        } else {
+          alert('Login failed');
+        }
+      });
+    }
+    if (url.searchParams.get('token')) {
+      loginCard.style.display = 'none';
+    }
+  </script>
 </body>
 </html>
 
