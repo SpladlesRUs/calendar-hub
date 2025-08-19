@@ -8,7 +8,8 @@ services:
       PORT: "8080"
       TZ: "America/New_York"
       CALHUB_DB_PATH: "/data/calhub.db"
-      ADMIN_TOKEN: "rohhuh-vihta8-vumgyT"
+      ADMIN_USERNAME: "admin"
+      ADMIN_PASSWORD: "rohhuh-vihta8-vumgyT"
       # Comma separated list of allowed iframe parents. Example: https://lifeislucha.com,https://www.lifeislucha.com
       ALLOWED_FRAME_PARENTS: "${ALLOWED_FRAME_PARENTS:-*}"
     volumes:
