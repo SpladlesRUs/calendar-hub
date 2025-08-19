@@ -77,13 +77,17 @@ def make_slug(text: str) -> str:
     """Create a slug from text using the python-slugify library."""
     return slugify(text)
 
+# Public login page
 @app.get("/", response_class=HTMLResponse)
-async def root(request: Request):
-    return RedirectResponse(url="/admin")
+async def root():
+    """Show the admin login form."""
+    with open("templates/login.html", "r", encoding="utf-8") as f:
+        return HTMLResponse(f.read())
 
 # Admin dashboard
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_page(request: Request, session: Session = Depends(get_session)):
+    require_admin(request)
     calendars = session.exec(select(Calendar).order_by(Calendar.name)).all()
     token = request.query_params.get("token") or request.headers.get("X-Admin-Token")
     with open("templates/admin.html", "r", encoding="utf-8") as f:
