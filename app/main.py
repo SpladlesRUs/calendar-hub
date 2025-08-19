@@ -38,6 +38,8 @@ def get_session():
 app = FastAPI()
 
 # Static and templates
+# Ensure the uploads directory exists before mounting static files
+os.makedirs("/data/uploads", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/uploads", StaticFiles(directory="/data/uploads"), name="uploads")
 
@@ -154,13 +156,3 @@ async def embed(slug: str, session: Session = Depends(get_session)):
 def on_start():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     init_db()
-    # Lightweight migration for new fields
-    from sqlalchemy import text
-    with engine.connect() as conn:
-        cols = [row[1] for row in conn.exec_driver_sql("PRAGMA table_info('calendar')")]
-        if "incoming_ics_url" not in cols:
-            conn.exec_driver_sql("ALTER TABLE calendar ADD COLUMN incoming_ics_url TEXT")
-            if "ics_url" in cols:
-                conn.exec_driver_sql("UPDATE calendar SET incoming_ics_url = ics_url WHERE incoming_ics_url IS NULL")
-        if "logo_path" not in cols:
-            conn.exec_driver_sql("ALTER TABLE calendar ADD COLUMN logo_path TEXT")
