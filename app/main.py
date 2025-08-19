@@ -1,10 +1,10 @@
 import os
 import secrets
-from typing import Optional, List
+from typing import Optional
 from fastapi import FastAPI, Request, Depends, Form, HTTPException, status, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, Response, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
-import re, pathlib
+import pathlib
 from sqlmodel import SQLModel, Field, Session, create_engine, select
 from slugify import slugify
 import httpx
@@ -25,6 +25,7 @@ class Calendar(SQLModel, table=True):
     incoming_ics_url: Optional[str] = None
     primary_color: str = "#0b9444"
     accent_color: str = "#0bd3d3"
+    background_color: str = "#ffffff"
     logo_url: Optional[str] = None
     logo_path: Optional[str] = None
     timezone: str = "America/New_York"
@@ -73,8 +74,8 @@ def require_admin(request: Request):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 def make_slug(text: str) -> str:
-    s = re.sub(r'[^a-z0-9]+', '-', text.lower().strip().replace(' ', '-'))
-    return re.sub(r'-+', '-', s).strip('-')
+    """Create a slug from text using the python-slugify library."""
+    return slugify(text)
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
@@ -88,18 +89,22 @@ async def admin_page(request: Request, session: Session = Depends(get_session)):
     with open("templates/admin.html", "r", encoding="utf-8") as f:
         tpl = f.read()
     form_action = "/admin/create"
+    token_param = ""
     if token:
         form_action += f"?token={token}"
+        token_param = f"?token={token}"
+    table_rows = "".join(
+        [
+            f"<tr><td>{c.name}</td><td>{c.slug}</td><td>{c.incoming_ics_url or ''}</td>"
+            f"<td><a href='/c/{c.slug}/embed' target='_blank'>preview</a> | "
+            f"<a href='/admin/embed-code/{c.slug}{token_param}'>code</a> | "
+            f"<form method='post' action='/admin/delete/{c.slug}{token_param}' style='display:inline' onsubmit=\"return confirm('Delete calendar?')\"><button type='submit'>delete</button></form></td></tr>"
+            for c in calendars
+        ]
+    )
     return HTMLResponse(
         tpl.replace("{{cal_count}}", str(len(calendars)))
-        .replace("{{table_rows}}",
-                 "".join(
-                     [
-                         f"<tr><td>{c.name}</td><td>{c.slug}</td><td>{c.incoming_ics_url or ''}</td>"
-                         f"<td><a href='/c/{c.slug}/embed' target='_blank'>embed</a></td></tr>"
-                         for c in calendars
-                     ]
-                 ))
+        .replace("{{table_rows}}", table_rows)
         .replace("{{form_action}}", form_action)
     )
 
@@ -113,6 +118,7 @@ async def create_calendar(
     logo_file: UploadFile | None = File(None),
     primary_color: str = Form("#0b9444"),
     accent_color: str = Form("#0bd3d3"),
+    background_color: str = Form("#ffffff"),
     timezone: str = Form("America/New_York"),
     default_view: str = Form("dayGridMonth"),
     session: Session = Depends(get_session)
@@ -135,11 +141,17 @@ async def create_calendar(
         saved_logo_path = str(dest)
 
     cal = Calendar(
-        name=name, slug=s,
+        name=name,
+        slug=s,
         incoming_ics_url=incoming_ics_url,
-        logo_url=saved_logo_url, logo_path=saved_logo_path,
-        primary_color=primary_color, accent_color=accent_color,
-        timezone=timezone, default_view=default_view, is_public=True
+        logo_url=saved_logo_url,
+        logo_path=saved_logo_path,
+        primary_color=primary_color,
+        accent_color=accent_color,
+        background_color=background_color,
+        timezone=timezone,
+        default_view=default_view,
+        is_public=True,
     )
     session.add(cal)
     session.commit()
@@ -167,14 +179,54 @@ async def embed(slug: str, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Calendar not found")
     with open("templates/embed.html", "r", encoding="utf-8") as f:
         tpl = f.read()
-    tpl = tpl.replace("{{NAME}}", cal.name)\
-             .replace("{{SLUG}}", cal.slug)\
-             .replace("{{LOGO_URL}}", cal.logo_url or "")\
-             .replace("{{PRIMARY}}", cal.primary_color)\
-             .replace("{{ACCENT}}", cal.accent_color)\
-             .replace("{{VIEW}}", cal.default_view)\
-             .replace("{{TZ}}", cal.timezone)
+    tpl = (
+        tpl.replace("{{NAME}}", cal.name)
+        .replace("{{SLUG}}", cal.slug)
+        .replace("{{LOGO_URL}}", cal.logo_url or "")
+        .replace("{{PRIMARY}}", cal.primary_color)
+        .replace("{{ACCENT}}", cal.accent_color)
+        .replace("{{BG}}", cal.background_color)
+        .replace("{{VIEW}}", cal.default_view)
+        .replace("{{TZ}}", cal.timezone)
+    )
     return HTMLResponse(tpl)
+
+
+@app.get("/admin/embed-code/{slug}", response_class=HTMLResponse)
+async def embed_code(request: Request, slug: str, session: Session = Depends(get_session)):
+    """Return a simple page with the iframe embed snippet for a calendar."""
+    require_admin(request)
+    cal = session.exec(select(Calendar).where(Calendar.slug == slug)).first()
+    if not cal:
+        raise HTTPException(status_code=404, detail="Calendar not found")
+    base = str(request.base_url).rstrip("/")
+    src = f"{base}/c/{cal.slug}/embed"
+    code = f"<iframe src=\"{src}\" style=\"border:0;width:100%;height:600px\"></iframe>"
+    html = (
+        "<html><head><title>Embed Code</title>"
+        "<link rel='stylesheet' href='/static/styles.css'></head><body>"
+        f"<main class='wrap'><h2>Embed code for {cal.name}</h2>"
+        f"<textarea readonly style='width:100%;height:120px'>{code}</textarea>"
+        "</main></body></html>"
+    )
+    return HTMLResponse(html)
+
+
+@app.post("/admin/delete/{slug}")
+async def delete_calendar(request: Request, slug: str, session: Session = Depends(get_session)):
+    """Delete a calendar and its uploaded logo."""
+    require_admin(request)
+    cal = session.exec(select(Calendar).where(Calendar.slug == slug)).first()
+    if not cal:
+        raise HTTPException(status_code=404, detail="Calendar not found")
+    if cal.logo_path:
+        try:
+            os.remove(cal.logo_path)
+        except OSError:
+            pass
+    session.delete(cal)
+    session.commit()
+    return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
 
 @app.on_event("startup")
 def on_start():
