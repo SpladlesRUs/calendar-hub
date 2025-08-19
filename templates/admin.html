@@ -32,12 +32,20 @@
             <label>Slug <input id="slug" name="slug" placeholder="auto-from-name"></label>
             <label>Incoming ICS URL <input name="incoming_ics_url" placeholder="https://.../calendar.ics"></label>
             <label>Timezone <input name="timezone" value="America/New_York"></label>
-            <label>Default View
-              <select name="default_view">
+            <label>Desktop Default View
+              <select name="desktop_view">
                 <option value="dayGridMonth">Month</option>
                 <option value="timeGridWeek">Week</option>
                 <option value="timeGridDay">Day</option>
                 <option value="listWeek">List</option>
+              </select>
+            </label>
+            <label>Mobile Default View
+              <select name="mobile_view">
+                <option value="dayGridMonth">Month</option>
+                <option value="timeGridWeek">Week</option>
+                <option value="timeGridDay">Day</option>
+                <option value="listWeek" selected>List</option>
               </select>
             </label>
           </div>
@@ -50,6 +58,8 @@
             <label>Background Color <input name="background_color" type="color" value="#ffffff"></label>
             <label>Logo URL <input name="logo_url" placeholder="https://.../logo.png"></label>
             <label>Upload Logo (optional) <input type="file" name="logo_file" accept="image/*"></label>
+            <label>Logo Height (px) <input name="logo_height" type="number" value="40"></label>
+            <label><input type="checkbox" name="show_name" value="1" checked> Show Calendar Name</label>
           </div>
         </fieldset>
         <div class="right">
