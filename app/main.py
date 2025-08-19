@@ -1,4 +1,5 @@
 import os
+import secrets
 from typing import Optional, List
 from fastapi import FastAPI, Request, Depends, Form, HTTPException, status, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, Response, PlainTextResponse
@@ -10,7 +11,9 @@ import httpx
 
 PORT = int(os.getenv("PORT", "8080"))
 DB_PATH = os.getenv("CALHUB_DB_PATH", "/data/calhub.db")
-ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "change-this-admin-token")
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
+ADMIN_TOKEN: Optional[str] = os.getenv("ADMIN_TOKEN")
 ALLOWED_PARENTS = os.getenv("ALLOWED_FRAME_PARENTS", "*")
 
 engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
@@ -55,9 +58,18 @@ async def frame_headers(request: Request, call_next):
 async def health():
     return Response(status_code=204)
 
+
+@app.post("/admin/login")
+async def admin_login(username: str = Form(...), password: str = Form(...)):
+    global ADMIN_TOKEN
+    if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+        ADMIN_TOKEN = secrets.token_urlsafe(32)
+        return {"token": ADMIN_TOKEN}
+    raise HTTPException(status_code=401, detail="Invalid credentials")
+
 def require_admin(request: Request):
     token = request.headers.get("X-Admin-Token") or request.query_params.get("token")
-    if token != ADMIN_TOKEN:
+    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 def make_slug(text: str) -> str:
