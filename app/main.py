@@ -26,6 +26,8 @@ class Calendar(SQLModel, table=True):
     primary_color: str = "#0b9444"
     accent_color: str = "#0bd3d3"
     background_color: str = "#ffffff"
+    text_color: str = "#222222"
+    title_color: str = "#ffffff"
     logo_url: Optional[str] = None
     logo_path: Optional[str] = None
     logo_height: int = 40
@@ -104,6 +106,7 @@ async def admin_page(request: Request, session: Session = Depends(get_session)):
         [
             f"<tr><td>{c.name}</td><td>{c.slug}</td><td>{c.incoming_ics_url or ''}</td>"
             f"<td><a href='/c/{c.slug}/embed' target='_blank'>preview</a> | "
+            f"<a href='/admin/edit/{c.slug}{token_param}'>edit</a> | "
             f"<a href='/admin/embed-code/{c.slug}{token_param}'>code</a> | "
             f"<form method='post' action='/admin/delete/{c.slug}{token_param}' style='display:inline' onsubmit=\"return confirm('Delete calendar?')\"><button type='submit'>delete</button></form></td></tr>"
             for c in calendars
@@ -126,6 +129,8 @@ async def create_calendar(
     primary_color: str = Form("#0b9444"),
     accent_color: str = Form("#0bd3d3"),
     background_color: str = Form("#ffffff"),
+    text_color: str = Form("#222222"),
+    title_color: str = Form("#ffffff"),
     timezone: str = Form("America/New_York"),
     desktop_view: str = Form("dayGridMonth"),
     mobile_view: str = Form("listWeek"),
@@ -159,6 +164,8 @@ async def create_calendar(
         primary_color=primary_color,
         accent_color=accent_color,
         background_color=background_color,
+        text_color=text_color,
+        title_color=title_color,
         timezone=timezone,
         desktop_view=desktop_view,
         mobile_view=mobile_view,
@@ -174,6 +181,106 @@ async def create_calendar(
         redirect_url += f"?token={token}"
     return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
 
+# Edit calendar
+@app.get("/admin/edit/{slug}", response_class=HTMLResponse)
+async def edit_calendar_page(request: Request, slug: str, session: Session = Depends(get_session)):
+    require_admin(request)
+    cal = session.exec(select(Calendar).where(Calendar.slug == slug)).first()
+    if not cal:
+        raise HTTPException(status_code=404, detail="Calendar not found")
+    token = request.query_params.get("token") or request.headers.get("X-Admin-Token")
+    token_param = f"?token={token}" if token else ""
+    with open("templates/edit.html", "r", encoding="utf-8") as f:
+        tpl = f.read()
+    def sel(val: str, target: str) -> str:
+        return "selected" if val == target else ""
+    tpl = (
+        tpl.replace("{{SLUG}}", cal.slug)
+        .replace("{{NAME}}", cal.name)
+        .replace("{{ICS}}", cal.incoming_ics_url or "")
+        .replace("{{TZ}}", cal.timezone)
+        .replace("{{PRIMARY}}", cal.primary_color)
+        .replace("{{ACCENT}}", cal.accent_color)
+        .replace("{{BG}}", cal.background_color)
+        .replace("{{TEXT_COLOR}}", cal.text_color)
+        .replace("{{TITLE_COLOR}}", cal.title_color)
+        .replace("{{LOGO_URL}}", cal.logo_url or "")
+        .replace("{{LOGO_HEIGHT}}", str(cal.logo_height))
+        .replace("{{DESKTOP_MONTH}}", sel(cal.desktop_view, "dayGridMonth"))
+        .replace("{{DESKTOP_WEEK}}", sel(cal.desktop_view, "timeGridWeek"))
+        .replace("{{DESKTOP_DAY}}", sel(cal.desktop_view, "timeGridDay"))
+        .replace("{{DESKTOP_LIST}}", sel(cal.desktop_view, "listWeek"))
+        .replace("{{MOBILE_MONTH}}", sel(cal.mobile_view, "dayGridMonth"))
+        .replace("{{MOBILE_WEEK}}", sel(cal.mobile_view, "timeGridWeek"))
+        .replace("{{MOBILE_DAY}}", sel(cal.mobile_view, "timeGridDay"))
+        .replace("{{MOBILE_LIST}}", sel(cal.mobile_view, "listWeek"))
+        .replace("{{SHOW_NAME_CHECKED}}", "checked" if cal.show_name else "")
+        .replace("{{TOKEN_PARAM}}", token_param)
+    )
+    return HTMLResponse(tpl)
+
+
+@app.post("/admin/edit/{slug}")
+async def edit_calendar(
+    request: Request,
+    slug: str,
+    name: str = Form(...),
+    incoming_ics_url: Optional[str] = Form(None),
+    logo_url: Optional[str] = Form(None),
+    logo_file: UploadFile | None = File(None),
+    primary_color: str = Form("#0b9444"),
+    accent_color: str = Form("#0bd3d3"),
+    background_color: str = Form("#ffffff"),
+    text_color: str = Form("#222222"),
+    title_color: str = Form("#ffffff"),
+    timezone: str = Form("America/New_York"),
+    desktop_view: str = Form("dayGridMonth"),
+    mobile_view: str = Form("listWeek"),
+    show_name: bool = Form(False),
+    logo_height: int = Form(40),
+    session: Session = Depends(get_session),
+):
+    require_admin(request)
+    cal = session.exec(select(Calendar).where(Calendar.slug == slug)).first()
+    if not cal:
+        raise HTTPException(status_code=404, detail="Calendar not found")
+
+    cal.name = name
+    cal.incoming_ics_url = incoming_ics_url
+    cal.timezone = timezone
+    cal.desktop_view = desktop_view
+    cal.mobile_view = mobile_view
+    cal.primary_color = primary_color
+    cal.accent_color = accent_color
+    cal.background_color = background_color
+    cal.text_color = text_color
+    cal.title_color = title_color
+    cal.show_name = show_name
+    cal.logo_height = logo_height
+
+    if logo_file and logo_file.filename:
+        dest_dir = pathlib.Path("/data/uploads") / cal.slug
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest = dest_dir / logo_file.filename
+        with dest.open("wb") as f:
+            f.write(await logo_file.read())
+        if cal.logo_path:
+            try:
+                os.remove(cal.logo_path)
+            except OSError:
+                pass
+        cal.logo_url = f"/uploads/{cal.slug}/{logo_file.filename}"
+        cal.logo_path = str(dest)
+    elif logo_url is not None:
+        cal.logo_url = logo_url or None
+
+    session.add(cal)
+    session.commit()
+    token = request.query_params.get("token") or request.headers.get("X-Admin-Token")
+    redirect_url = "/admin"
+    if token:
+        redirect_url += f"?token={token}"
+    return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
 # ICS proxy so browsers can load remote feeds without CORS issues
 @app.get("/api/cal/{slug}/ics", response_class=PlainTextResponse)
 async def proxy_ics(slug: str, session: Session = Depends(get_session)):
@@ -210,6 +317,8 @@ async def embed(slug: str, session: Session = Depends(get_session)):
         .replace("{{PRIMARY}}", cal.primary_color)
         .replace("{{ACCENT}}", cal.accent_color)
         .replace("{{BG}}", cal.background_color)
+        .replace("{{TEXT_COLOR}}", cal.text_color)
+        .replace("{{TITLE_COLOR}}", cal.title_color)
         .replace("{{DESKTOP_VIEW}}", cal.desktop_view)
         .replace("{{MOBILE_VIEW}}", cal.mobile_view)
         .replace("{{TZ}}", cal.timezone)
