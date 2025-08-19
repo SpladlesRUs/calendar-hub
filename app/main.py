@@ -28,8 +28,11 @@ class Calendar(SQLModel, table=True):
     background_color: str = "#ffffff"
     logo_url: Optional[str] = None
     logo_path: Optional[str] = None
+    logo_height: int = 40
     timezone: str = "America/New_York"
-    default_view: str = "dayGridMonth"
+    desktop_view: str = "dayGridMonth"
+    mobile_view: str = "listWeek"
+    show_name: bool = True
     is_public: bool = True
 
 def init_db():
@@ -124,7 +127,10 @@ async def create_calendar(
     accent_color: str = Form("#0bd3d3"),
     background_color: str = Form("#ffffff"),
     timezone: str = Form("America/New_York"),
-    default_view: str = Form("dayGridMonth"),
+    desktop_view: str = Form("dayGridMonth"),
+    mobile_view: str = Form("listWeek"),
+    show_name: bool = Form(False),
+    logo_height: int = Form(40),
     session: Session = Depends(get_session)
 ):
     require_admin(request)
@@ -154,7 +160,10 @@ async def create_calendar(
         accent_color=accent_color,
         background_color=background_color,
         timezone=timezone,
-        default_view=default_view,
+        desktop_view=desktop_view,
+        mobile_view=mobile_view,
+        show_name=show_name,
+        logo_height=logo_height,
         is_public=True,
     )
     session.add(cal)
@@ -187,15 +196,24 @@ async def embed(slug: str, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Calendar not found")
     with open("templates/embed.html", "r", encoding="utf-8") as f:
         tpl = f.read()
+    logo_html = (
+        f"<img class='logo' src=\"{cal.logo_url}\" alt=\"{cal.name} logo\">"
+        if cal.logo_url
+        else ""
+    )
+    title_html = f"<h1 style='margin-left:8px'>{cal.name}</h1>" if cal.show_name else ""
     tpl = (
-        tpl.replace("{{NAME}}", cal.name)
+        tpl.replace("{{LOGO}}", logo_html)
+        .replace("{{TITLE}}", title_html)
+        .replace("{{TITLE_TEXT}}", cal.name)
         .replace("{{SLUG}}", cal.slug)
-        .replace("{{LOGO_URL}}", cal.logo_url or "")
         .replace("{{PRIMARY}}", cal.primary_color)
         .replace("{{ACCENT}}", cal.accent_color)
         .replace("{{BG}}", cal.background_color)
-        .replace("{{VIEW}}", cal.default_view)
+        .replace("{{DESKTOP_VIEW}}", cal.desktop_view)
+        .replace("{{MOBILE_VIEW}}", cal.mobile_view)
         .replace("{{TZ}}", cal.timezone)
+        .replace("{{LOGO_HEIGHT}}", str(cal.logo_height))
     )
     return HTMLResponse(tpl)
 
