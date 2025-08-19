@@ -1,0 +1,25 @@
+services:
+  calendar-hub:
+    container_name: calendar-hub
+    build:
+      dockerfile: Dockerfile
+    environment:
+      # App config
+      PORT: "8080"
+      TZ: "America/New_York"
+      CALHUB_DB_PATH: "/data/calhub.db"
+      ADMIN_TOKEN: "rohhuh-vihta8-vumgyT"
+      # Comma separated list of allowed iframe parents. Example: https://lifeislucha.com,https://www.lifeislucha.com
+      ALLOWED_FRAME_PARENTS: "${ALLOWED_FRAME_PARENTS:-*}"
+    volumes:
+      - /root/configs/calendar-hub/data:/data
+    # Publish a local port for quick testing. NPM can also reach it over the Docker network.
+    ports:
+      - "8087:8080"
+    networks:
+      - npm_net
+    restart: unless-stopped
+
+networks:
+  npm_net:
+    external: true

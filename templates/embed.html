@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{{NAME}}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    :root{
+      --primary: {{PRIMARY}};
+      --accent: {{ACCENT}};
+    }
+    .logo{height:40px; object-fit:contain}
+    .wrap{max-width:1100px;margin:8px auto;padding:0 12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="bar">
+      <div class="left">
+        {% if "{{LOGO_URL}}" %}<img class="logo" src="{{LOGO_URL}}" alt="{{NAME}} logo">{% endif %}
+        <h1 style="margin-left:8px">{{NAME}}</h1>
+      </div>
+      <div class="muted">{{TZ}}</div>
+    </header>
+
+    <div id="calendar"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/icalendar@6.1.15/index.global.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const el = document.getElementById('calendar');
+      const isMobile = window.matchMedia('(max-width: 768px)').matches;
+      const initialView = isMobile ? 'listWeek' : '{{VIEW}}';
+
+      const calendar = new FullCalendar.Calendar(el, {
+        themeSystem: 'standard',
+        initialView,
+        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' },
+        height: 'auto',
+        nowIndicator: true,
+        eventDisplay: 'block',
+        eventColor: getComputedStyle(document.documentElement).getPropertyValue('--primary'),
+        eventBorderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent'),
+        timeZone: '{{TZ}}',
+        events: [{
+          url: '/api/cal/{{SLUG}}/ics',
+          format: 'ics'
+        }]
+      });
+      calendar.render();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Calendar Hub Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="bar">
+    <h1>Calendar Hub</h1>
+    <div class="muted">Total: {{cal_count}}</div>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <h2>Create calendar</h2>
+      <form method="post" action="/admin/create" enctype="multipart/form-data">
+        <div class="grid">
+          <label>Name <input id="name" name="name" required></label>
+          <label>Slug <input id="slug" name="slug" placeholder="auto-from-name"></label>
+          <label>Incoming ICS URL <input name="incoming_ics_url" placeholder="https://.../calendar.ics"></label>
+          <label>Logo URL <input name="logo_url" placeholder="https://.../logo.png"></label>
+          <label>Upload Logo (optional) <input type="file" name="logo_file" accept="image/*"></label>
+          <label>Primary Color <input name="primary_color" type="color" value="#0b9444"></label>
+          <label>Accent Color <input name="accent_color" type="color" value="#0bd3d3"></label>
+          <label>Timezone <input name="timezone" value="America/New_York"></label>
+          <label>Default View
+            <select name="default_view">
+              <option value="dayGridMonth">Month</option>
+              <option value="timeGridWeek">Week</option>
+              <option value="timeGridDay">Day</option>
+              <option value="listWeek">List</option>
+            </select>
+          </label>
+        </div>
+        <div class="right">
+          <button type="submit">Save</button>
+        </div>
+        <p class="muted">Pass <code>?token=YOUR_ADMIN_TOKEN</code> in the URL or set header <code>X-Admin-Token</code> when posting.</p>
+        <script>
+          const nameEl = document.getElementById('name');
+          const slugEl = document.getElementById('slug');
+          if (nameEl &amp;&amp; slugEl) {
+            nameEl.addEventListener('input', () =&gt; {
+              if (slugEl.value.trim().length === 0) {
+                const s = nameEl.value.toLowerCase()
+                  .replace(/\s+/g,'-')
+                  .replace(/[^a-z0-9-]/g,'-')
+                  .replace(/-+/g,'-')
+                  .replace(/^-|-$/g,'');
+                slugEl.value = s;
+              }
+            });
+          }
+        </script>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Calendars</h2>
+      <table>
+        <thead><tr><th>Name</th><th>Slug</th><th>Incoming ICS</th><th>Embed</th></tr></thead>
+        <tbody>
+          {{table_rows}}
+        </tbody>
+      </table>
+      <p class="muted">Embed URL format: <code>/c/&lt;slug&gt;/embed</code></p>
+    </section>
+  </main>
+</body>
+</html>
