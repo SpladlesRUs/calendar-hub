@@ -327,21 +327,68 @@ async def embed(slug: str, session: Session = Depends(get_session)):
     return HTMLResponse(tpl)
 
 
+@app.get("/c/{slug}/embed.js", response_class=PlainTextResponse)
+async def embed_script(slug: str, session: Session = Depends(get_session)):
+    """Return a JS loader that renders the calendar into #calendar-container."""
+    cal = session.exec(
+        select(Calendar).where(Calendar.slug == slug, Calendar.is_public == True)
+    ).first()
+    if not cal:
+        raise HTTPException(status_code=404, detail="Calendar not found")
+
+    logo_html = (
+        f'<img class="logo" src="{cal.logo_url}" alt="{cal.name} logo">'
+        if cal.logo_url
+        else ""
+    )
+    title_html = f"<h1 style='margin-left:8px'>{cal.name}</h1>" if cal.show_name else ""
+
+    js = f"""
+(function(){{
+  const container=document.getElementById('calendar-container');
+  if(!container) return;
+  container.innerHTML=`<div class='wrap'><header class=\"bar\"><div class=\"left\">{logo_html}{title_html}</div><div class=\"muted\">{cal.timezone}</div></header><div id=\"calendar\"></div></div>`;
+  const style=document.createElement('style');
+  style.textContent=`#calendar-container{{--primary:{cal.primary_color};--accent:{cal.accent_color};--bg:{cal.background_color};--text:{cal.text_color};--title:{cal.title_color};background-color:var(--bg);color:var(--text);}}#calendar-container .logo{{height:{cal.logo_height}px;object-fit:contain}}#calendar-container header.bar{{background-color:var(--primary);color:var(--title)}}#calendar-container .wrap{{max-width:1100px;margin:8px auto;padding:0 12px}}`;
+  document.head.appendChild(style);
+  const el=container.querySelector('#calendar');
+  const isMobile=window.matchMedia('(max-width: 768px)').matches;
+  const initialView=isMobile?'{cal.mobile_view}':'{cal.desktop_view}';
+  const headerDesktop={{ left:'prev,next today', center:'title', right:'dayGridMonth,timeGridWeek,timeGridDay,listWeek' }};
+  const headerMobile={{ center:'title', left:'', right:'' }};
+  const footerMobile={{ left:'prev,next today', right:'dayGridMonth,timeGridWeek,timeGridDay,listWeek' }};
+  const colors=getComputedStyle(container);
+  const calendar=new FullCalendar.Calendar(el,{{themeSystem:'standard',initialView,headerToolbar:isMobile?headerMobile:headerDesktop,footerToolbar:isMobile?footerMobile:undefined,height:'auto',nowIndicator:true,eventDisplay:'block',eventColor:colors.getPropertyValue('--primary'),eventBorderColor:colors.getPropertyValue('--accent'),eventTextColor:colors.getPropertyValue('--text'),timeZone:'{cal.timezone}',events:[{{url:'/api/cal/{cal.slug}/ics',format:'ics'}}]}});
+  calendar.render();
+}})();
+"""
+    return PlainTextResponse(js, media_type="text/javascript")
+
+
 @app.get("/admin/embed-code/{slug}", response_class=HTMLResponse)
 async def embed_code(request: Request, slug: str, session: Session = Depends(get_session)):
-    """Return a simple page with the iframe embed snippet for a calendar."""
+    """Return a page with embed snippets for a calendar."""
     require_admin(request)
     cal = session.exec(select(Calendar).where(Calendar.slug == slug)).first()
     if not cal:
         raise HTTPException(status_code=404, detail="Calendar not found")
     base = str(request.base_url).rstrip("/")
-    src = f"{base}/c/{cal.slug}/embed"
-    code = f"<iframe src=\"{src}\" style=\"border:0;width:100%;height:600px\"></iframe>"
+    iframe_src = f"{base}/c/{cal.slug}/embed"
+    iframe_code = (
+        f"<iframe src=\"{iframe_src}\" style=\"border:0;width:100%;height:600px\"></iframe>"
+    )
+    script_src = f"{base}/c/{cal.slug}/embed.js"
+    js_code = (
+        f"<div id=\"calendar-container\"></div><script src=\"{script_src}\"></script>"
+    )
     html = (
         "<html><head><title>Embed Code</title>"
         "<link rel='stylesheet' href='/static/styles.css'></head><body>"
         f"<main class='wrap'><h2>Embed code for {cal.name}</h2>"
-        f"<textarea readonly style='width:100%;height:120px'>{code}</textarea>"
+        "<h3>Iframe</h3>"
+        f"<textarea readonly style='width:100%;height:120px'>{iframe_code}</textarea>"
+        "<h3>JavaScript</h3>"
+        f"<textarea readonly style='width:100%;height:120px'>{js_code}</textarea>"
         "</main></body></html>"
     )
     return HTMLResponse(html)
