@@ -72,12 +72,24 @@ async def root(request: Request):
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_page(request: Request, session: Session = Depends(get_session)):
     calendars = session.exec(select(Calendar).order_by(Calendar.name)).all()
+    token = request.query_params.get("token") or request.headers.get("X-Admin-Token")
     with open("templates/admin.html", "r", encoding="utf-8") as f:
         tpl = f.read()
-    return HTMLResponse(tpl.replace("{{cal_count}}", str(len(calendars))).replace("{{table_rows}}",
-                       "".join([f"<tr><td>{c.name}</td><td>{c.slug}</td><td>{c.incoming_ics_url or ''}</td>"
-                                f"<td><a href='/c/{c.slug}/embed' target='_blank'>embed</a></td></tr>"
-                                for c in calendars])))
+    form_action = "/admin/create"
+    if token:
+        form_action += f"?token={token}"
+    return HTMLResponse(
+        tpl.replace("{{cal_count}}", str(len(calendars)))
+        .replace("{{table_rows}}",
+                 "".join(
+                     [
+                         f"<tr><td>{c.name}</td><td>{c.slug}</td><td>{c.incoming_ics_url or ''}</td>"
+                         f"<td><a href='/c/{c.slug}/embed' target='_blank'>embed</a></td></tr>"
+                         for c in calendars
+                     ]
+                 ))
+        .replace("{{form_action}}", form_action)
+    )
 
 @app.post("/admin/create", response_class=HTMLResponse)
 async def create_calendar(

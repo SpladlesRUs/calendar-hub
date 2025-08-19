@@ -15,7 +15,7 @@
   <main class="wrap">
     <section class="card">
       <h2>Create calendar</h2>
-      <form method="post" action="/admin/create" enctype="multipart/form-data">
+      <form method="post" action="{{form_action}}" enctype="multipart/form-data">
         <div class="grid">
           <label>Name <input id="name" name="name" required></label>
           <label>Slug <input id="slug" name="slug" placeholder="auto-from-name"></label>
@@ -37,12 +37,12 @@
         <div class="right">
           <button type="submit">Save</button>
         </div>
-        <p class="muted">Pass <code>?token=YOUR_ADMIN_TOKEN</code> in the URL or set header <code>X-Admin-Token</code> when posting.</p>
+        <p class="muted">Include <code>?token=YOUR_ADMIN_TOKEN</code> in the URL or send header <code>X-Admin-Token</code>.</p>
         <script>
           const nameEl = document.getElementById('name');
           const slugEl = document.getElementById('slug');
-          if (nameEl &amp;&amp; slugEl) {
-            nameEl.addEventListener('input', () =&gt; {
+          if (nameEl && slugEl) {
+            nameEl.addEventListener('input', () => {
               if (slugEl.value.trim().length === 0) {
                 const s = nameEl.value.toLowerCase()
                   .replace(/\s+/g,'-')
@@ -70,3 +70,4 @@
   </main>
 </body>
 </html>
+
