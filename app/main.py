@@ -4,6 +4,7 @@ from typing import Optional
 from fastapi import FastAPI, Request, Depends, Form, HTTPException, status, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, Response, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 import pathlib
 from sqlmodel import SQLModel, Field, Session, create_engine, select
 from slugify import slugify
@@ -45,6 +46,13 @@ def get_session():
         yield session
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Static and templates
 # Ensure the uploads directory exists before mounting static files
@@ -282,7 +290,7 @@ async def edit_calendar(
         redirect_url += f"?token={token}"
     return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
 # ICS proxy so browsers can load remote feeds without CORS issues
-@app.get("/api/cal/{slug}/ics", response_class=PlainTextResponse)
+@app.api_route("/api/cal/{slug}/ics", methods=["GET", "HEAD"], response_class=PlainTextResponse)
 async def proxy_ics(slug: str, session: Session = Depends(get_session)):
     cal = session.exec(select(Calendar).where(Calendar.slug == slug)).first()
     if not cal or not cal.incoming_ics_url:
