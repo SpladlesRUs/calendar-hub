@@ -38,3 +38,5 @@ Then add a container and load the calendar-specific script:
 
 The loader injects the calendar markup into `#calendar-container` and uses the loaded FullCalendar libraries to render events.
 
+When running behind a reverse proxy, ensure it sets the `X-Forwarded-Proto` header so embedded assets use the correct scheme. If you include the `<script>` tag in the `<head>`, add the `defer` attribute (instead of `async`) to ensure the calendar container exists before the loader executes.
+
