@@ -57,7 +57,7 @@
         eventTextColor: getComputedStyle(document.documentElement).getPropertyValue('--text'),
         titleColor: getComputedStyle(document.documentElement).getPropertyValue('--title'),
         timeZone: '{{TZ}}',
-        events: [{
+        eventSources: [{
           url: '/api/cal/{{SLUG}}/ics',
           format: 'ics'
         }]
