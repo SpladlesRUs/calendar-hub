@@ -407,9 +407,9 @@ async def embed_script(request: Request, slug: str, session: Session = Depends(g
     }} else {{
       init();
     }}
-  })();
+  }})();
   """
-      return PlainTextResponse(js, media_type="text/javascript")
+    return PlainTextResponse(js, media_type="text/javascript")
 
 
 @app.get("/admin/embed-code/{slug}", response_class=HTMLResponse)
