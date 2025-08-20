@@ -401,11 +401,15 @@ async def embed_script(request: Request, slug: str, session: Session = Depends(g
     const colors=getComputedStyle(container);
     const calendar=new FullCalendar.Calendar(el,{{themeSystem:'standard',initialView,headerToolbar:isMobile?headerMobile:headerDesktop,footerToolbar:isMobile?footerMobile:undefined,height:'auto',nowIndicator:true,eventDisplay:'block',eventColor:colors.getPropertyValue('--primary'),eventBorderColor:colors.getPropertyValue('--accent'),eventTextColor:colors.getPropertyValue('--text'),timeZone:'{cal.timezone}',events:[{{url:'{ics_url}',format:'ics'}}]}});
     calendar.render();
-  }}
-  init();
-}})();
-"""
-    return PlainTextResponse(js, media_type="text/javascript")
+    }}
+    if (document.readyState === 'loading') {{
+      document.addEventListener('DOMContentLoaded', init);
+    }} else {{
+      init();
+    }}
+  })();
+  """
+      return PlainTextResponse(js, media_type="text/javascript")
 
 
 @app.get("/admin/embed-code/{slug}", response_class=HTMLResponse)
