@@ -297,7 +297,10 @@ async def proxy_ics(slug: str, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Calendar or ICS not found")
     try:
         async with httpx.AsyncClient(timeout=20) as c:
-            r = await c.get(cal.incoming_ics_url, headers={"User-Agent": "CalendarHub"})
+            r = await c.get(
+                cal.incoming_ics_url,
+                headers={"User-Agent": "CalendarHub", "Accept": "text/calendar"},
+            )
         r.raise_for_status()
     except httpx.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"ICS fetch failed: {e}")
@@ -384,6 +387,7 @@ async def embed_script(request: Request, slug: str, session: Session = Depends(g
     await loadStyle('https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css');
     await loadStyle('{base}/static/styles.css');
     await loadScript('https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js');
+    await loadScript('https://cdn.jsdelivr.net/npm/ical.js@1.4.0/build/ical.min.js');
     await loadScript('https://cdn.jsdelivr.net/npm/@fullcalendar/icalendar@6.1.15/index.global.min.js');
 
     const container=document.getElementById('calendar-container');
@@ -399,7 +403,7 @@ async def embed_script(request: Request, slug: str, session: Session = Depends(g
     const headerMobile={{ center:'title', left:'', right:'' }};
     const footerMobile={{ left:'prev,next today', right:'dayGridMonth,timeGridWeek,timeGridDay,listWeek' }};
     const colors=getComputedStyle(container);
-    const calendar=new FullCalendar.Calendar(el,{{themeSystem:'standard',initialView,headerToolbar:isMobile?headerMobile:headerDesktop,footerToolbar:isMobile?footerMobile:undefined,height:'auto',nowIndicator:true,eventDisplay:'block',eventColor:colors.getPropertyValue('--primary'),eventBorderColor:colors.getPropertyValue('--accent'),eventTextColor:colors.getPropertyValue('--text'),timeZone:'{cal.timezone}',eventSources:[{{url:'{ics_url}',format:'ics'}}]}});
+    const calendar=new FullCalendar.Calendar(el,{{plugins:[FullCalendar.icalendarPlugin],themeSystem:'standard',initialView,headerToolbar:isMobile?headerMobile:headerDesktop,footerToolbar:isMobile?footerMobile:undefined,height:'auto',nowIndicator:true,eventDisplay:'block',eventColor:colors.getPropertyValue('--primary'),eventBorderColor:colors.getPropertyValue('--accent'),eventTextColor:colors.getPropertyValue('--text'),timeZone:'{cal.timezone}',eventSources:[{{url:'{ics_url}',format:'ics'}}]}});
     calendar.render();
     }}
     if (document.readyState === 'loading') {{
