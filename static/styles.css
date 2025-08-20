@@ -14,4 +14,6 @@ th,td{padding:8px;border-bottom:1px solid #eee;font-size:14px}
 .fc .fc-button-primary:hover{background:var(--accent,#0bd3d3);border-color:var(--accent,#0bd3d3)}
 .fc-theme-standard td,.fc-theme-standard th{border-color:var(--accent,#0bd3d3)}
 .fc-theme-standard .fc-scrollgrid{border-color:var(--primary,#0b9444)}
+.fc, .fc .fc-scrollgrid{border-radius:10px}
+.fc{overflow:hidden}
 .muted{color:#666;font-size:12px}
