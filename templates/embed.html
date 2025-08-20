@@ -34,6 +34,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ical.js@1.4.0/build/ical.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/icalendar@6.1.15/index.global.min.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -45,6 +46,7 @@
       const footerMobile = { left: 'prev,next today', right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' };
 
       const calendar = new FullCalendar.Calendar(el, {
+        plugins: [FullCalendar.icalendarPlugin],
         themeSystem: 'standard',
         initialView,
         headerToolbar: isMobile ? headerMobile : headerDesktop,
