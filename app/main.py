@@ -336,7 +336,9 @@ async def embed_script(request: Request, slug: str, session: Session = Depends(g
     if not cal:
         raise HTTPException(status_code=404, detail="Calendar not found")
 
-    base = str(request.base_url).rstrip("/")
+    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
+    host = request.headers.get("x-forwarded-host", request.url.netloc)
+    base = f"{scheme}://{host}".rstrip("/")
     logo_url = ""
     if cal.logo_url:
         if cal.logo_url.startswith("http://") or cal.logo_url.startswith("https://"):
@@ -405,7 +407,9 @@ async def embed_code(request: Request, slug: str, session: Session = Depends(get
     cal = session.exec(select(Calendar).where(Calendar.slug == slug)).first()
     if not cal:
         raise HTTPException(status_code=404, detail="Calendar not found")
-    base = str(request.base_url).rstrip("/")
+    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
+    host = request.headers.get("x-forwarded-host", request.url.netloc)
+    base = f"{scheme}://{host}".rstrip("/")
     iframe_src = f"{base}/c/{cal.slug}/embed"
     iframe_code = (
         f"<iframe src=\"{iframe_src}\" style=\"border:0;width:100%;height:600px\"></iframe>"
