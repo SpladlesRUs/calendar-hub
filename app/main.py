@@ -399,7 +399,7 @@ async def embed_script(request: Request, slug: str, session: Session = Depends(g
     const headerMobile={{ center:'title', left:'', right:'' }};
     const footerMobile={{ left:'prev,next today', right:'dayGridMonth,timeGridWeek,timeGridDay,listWeek' }};
     const colors=getComputedStyle(container);
-    const calendar=new FullCalendar.Calendar(el,{{themeSystem:'standard',initialView,headerToolbar:isMobile?headerMobile:headerDesktop,footerToolbar:isMobile?footerMobile:undefined,height:'auto',nowIndicator:true,eventDisplay:'block',eventColor:colors.getPropertyValue('--primary'),eventBorderColor:colors.getPropertyValue('--accent'),eventTextColor:colors.getPropertyValue('--text'),timeZone:'{cal.timezone}',eventSources:[{{url:'{ics_url}',format:'ics'}}]}});
+    const calendar=new FullCalendar.Calendar(el,{{plugins:[FullCalendar.icalendarPlugin],themeSystem:'standard',initialView,headerToolbar:isMobile?headerMobile:headerDesktop,footerToolbar:isMobile?footerMobile:undefined,height:'auto',nowIndicator:true,eventDisplay:'block',eventColor:colors.getPropertyValue('--primary'),eventBorderColor:colors.getPropertyValue('--accent'),eventTextColor:colors.getPropertyValue('--text'),timeZone:'{cal.timezone}',eventSources:[{{url:'{ics_url}',format:'ics'}}]}});
     calendar.render();
     }}
     if (document.readyState === 'loading') {{
